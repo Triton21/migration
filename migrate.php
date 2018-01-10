@@ -121,7 +121,6 @@ function migrateDatabase($db_name, $db, $argv) {
 
 function registerMigration($db_name, $file, $db) {
     $db->select_db($db_name);
-    //$sql = "INSERT INTO migrate (name, created) VALUES (" . $file . ", NOW());";
     $sql = "INSERT INTO migrate (name, created) VALUES ('$file' , NOW());";
     $result = $db->query($sql);
     if (!$result) {
