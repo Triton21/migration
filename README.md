@@ -7,7 +7,10 @@ USAGE:
 
 		   php -f migrate.php create
 
-4.  Create your mysql command txt file.
+4.  Create your mysql command txt file and save it to "text" directory.
+    
+5.  Execute migration line by line:
+        
     Each line must contain one executable mysql command.
 
     EXAMPLE:
@@ -18,7 +21,14 @@ USAGE:
     //migrate-v2.txt
     DROP TABLE test;
 
-5.  Execute all commands from the txt file with this command:
+    Command: 
+            php -f migrate.php lmigrate your_file.txt
+
+6.  Execute all commands from the txt file:
+    Script will identify each mysql command by semicolon. 
+    (If any of your VALUES contains semicolon then use 5. execute line by line
+    , as this method will throw an error!)
+
 
            php -f migrate.php migrate your_file.txt
     

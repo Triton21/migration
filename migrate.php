@@ -37,7 +37,10 @@ switch ($argv[1]) {
         createMigrateTable($db_name, $db);
         break;
     case 'migrate':
-        migrateDatabase($db_name, $db, $argv);
+        explodeFilebySemicolon($db_name, $db, $argv);
+        break;
+    case 'lmigrate':
+        explodeFileLinByLine($db_name, $db, $argv);
         break;
     default:
         echoHelper();
@@ -68,7 +71,6 @@ function echoHelper() {
     die;
 }
 
-
 function createMigrateTable($db_name, $db) {
     echo "Create migrate table\n";
     $db->select_db($db_name);
@@ -76,11 +78,64 @@ function createMigrateTable($db_name, $db) {
     $result = $db->query($sql);
 }
 
-function migrateDatabase($db_name, $db, $argv) {
+function explodeFilebySemicolon($db_name, $db, $argv) {
     $file = $argv[2];
     echo "Migrating table(s) " . $file . "\n";
     $db->select_db($db_name);
-    $pathToFile = __DIR__ . '/' . $file;
+    $pathToFile = __DIR__ . '/text/' . $file;
+    if (file_exists($pathToFile)) {
+
+        $fileSize = filesize($pathToFile);
+        $memory_limit = memory_get_usage();
+        if ($memory_limit < $fileSize) {
+            echo "\n\n" . $file . " is too big!\n\n";
+            echo "Your php memory limit: " . $memory_limit . " bytes\n\n";
+            echo $file . " size: " . $fileSize . " bytes\n\n";
+            die;
+        }
+        $fileContent = file_get_contents($pathToFile);
+        $explodeArray = [];
+        $transactions = [];
+        $explodeArray = explode(";", $fileContent);
+        foreach ($explodeArray as $tr) {
+            if ($tr != '') {
+                $transactions[] = $tr . ";";
+            }
+        }
+    } else {
+        echo "The file $pathToFile does not exist\n";
+        die;
+    }
+    migrateDatabase($transactions, $db, $file);
+}
+
+function migrateDatabase($transactions, $db, $file) {
+    //Try the migration, if error occurs roll back the whole process
+    try {
+        $db->autocommit(FALSE);
+        foreach ($transactions as $tr) {
+            $result = $db->query($tr);
+            if ($result === false) {
+                throw new Exception($db->error);
+            }
+        }
+        $db->commit();
+        $db->autocommit(TRUE);
+        echo "Migration successful!\n";
+        //register the migration if mig table exist
+        registerMigration($file, $db);
+    } catch (Exception $ex) {
+        $db->rollback();
+        $db->autocommit(TRUE);
+        echo $ex;
+    }
+}
+
+function explodeFileLinByLine($db_name, $db, $argv) {
+    $file = $argv[2];
+    echo "Migrating table(s) " . $file . "\n";
+    $db->select_db($db_name);
+    $pathToFile = __DIR__ . '/text/' . $file;
     if (file_exists($pathToFile)) {
         //get file content lineByLine and store it in array
         $h = fopen($pathToFile, 'r');
@@ -97,30 +152,10 @@ function migrateDatabase($db_name, $db, $argv) {
         echo "The file $pathToFile does not exist\n";
         die;
     }
-
-    //Try the migration, if error occurs roll back the whole process
-    try {
-        $db->autocommit(FALSE);
-        foreach ($transactions as $tr) {
-            $result = $db->query($tr);
-            if ($result === false) {
-                throw new Exception($db->error);
-            }
-        }
-        $db->commit();
-        $db->autocommit(TRUE);
-        echo "Migration successful!\n";
-        //register the migration if mig table exist
-        registerMigration($db_name, $file, $db);
-    } catch (Exception $ex) {
-        $db->rollback();
-        $db->autocommit(TRUE);
-        echo $ex;
-    }
+    migrateDatabase($transactions, $db, $file);
 }
 
-function registerMigration($db_name, $file, $db) {
-    $db->select_db($db_name);
+function registerMigration($file, $db) {
     $sql = "INSERT INTO migrate (name, created) VALUES ('$file' , NOW());";
     $result = $db->query($sql);
     if (!$result) {
