@@ -29,6 +29,7 @@ USAGE:
     Script will identify each mysql command by semicolon. 
     (If any of your VALUES contains semicolon then use 5. execute line by line,
      as this method will throw an error!)
+    
     Command:
 
            php -f migrate.php migrate your_file.txt
