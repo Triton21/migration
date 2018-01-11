@@ -22,13 +22,14 @@ USAGE:
     DROP TABLE test;
 
     Command: 
+
             php -f migrate.php lmigrate your_file.txt
 
 6.  Execute all commands from the txt file:
     Script will identify each mysql command by semicolon. 
-    (If any of your VALUES contains semicolon then use 5. execute line by line
-    , as this method will throw an error!)
-
+    (If any of your VALUES contains semicolon then use 5. execute line by line,
+     as this method will throw an error!)
+    Command:
 
            php -f migrate.php migrate your_file.txt
     
